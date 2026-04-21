@@ -37,7 +37,7 @@ df <- tibble(year = years,
   summarise(nbp_pgc_yr = sum(nbp_pgc_month), .groups = "drop")
 
 #### Plot: Change of NBP over time (temporal resolution) ####
-ggplot(df, aes(x = year, y = nbp_pgc_yr)) +
+Global_NBP_S3 <- ggplot(df, aes(x = year, y = nbp_pgc_yr)) +
   geom_line(color = "#2e86ab", linewidth = 0.6) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
   labs( title = "GDSTEM S3 — Global Net Biome Productivity (NBP)",
@@ -47,6 +47,11 @@ ggplot(df, aes(x = year, y = nbp_pgc_yr)) +
   theme_minimal(base_size = 13) +
   theme( plot.title    = element_text(face = "bold"),
          panel.grid.minor = element_blank())
+
+# save plot
+ggsave("/home/hannil98/GDSTEM-analysis-R/02_NBP_Analysis/Plots/Global_NBP_S3.png",
+       plot = Global_NBP_S3,   
+       width = 10, height = 6, dpi = 300)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -66,7 +71,7 @@ nbp_mean_gcc  <- nbp_mean * sec_per_year * 1000
 # nbp_mean_gcc is [lon x lat], expand.grid matches that order
 df_map <- expand.grid(lon = lon, lat = lat) %>%
   mutate(nbp = as.vector(nbp_mean_gcc)) %>%
-  filter(!is.na(nbp_S3))
+  filter(!is.na(nbp))
 
 # 4. Optional: Get country borders, but may cause memory issues
 # world <- ne_countries(scale = "medium", returnclass = "sf")
@@ -77,13 +82,13 @@ max_val <- max(abs(df_map$nbp), na.rm = TRUE)
 # 6. Plot 
 # look ad value range to define color scale
 hist(df_map$nbp)
-range(df_map$nbp) # --> choose -109 to 109
+range(df_map$nbp) # --> choose -108 to 109
 
-ggplot() +
+Global_Mean_NBP_S3 <- ggplot() +
   geom_raster(data = df_map, aes(x = lon, y = lat, fill = nbp)) +
   scale_fill_scico(
     palette  = "vik",
-    limits   = c(-109, 109),
+    limits   = c(-108, 109),
     na.value = "gray90",
     name     = "gC m\u207b\u00b2 yr\u207b\u00b9"
   ) +
@@ -100,8 +105,13 @@ ggplot() +
     legend.key.width = unit(3, "cm")
   )
 
-### compare latest  (1995-2024) to pre-industrial ( ) climate 
+# save plot
+ggsave("/home/hannil98/GDSTEM-analysis-R/02_NBP_Analysis/Plots/Global_Mean_NBP_S3.png",
+       plot = Global_Mean_NBP_S3,   
+       width = 10, height = 6, dpi = 300)
 
+
+### compare latest  (1995-2024) to pre-industrial ( ) climate 
 
 # --- 5. Compute mean NBP for each period ---
 conv         <- sec_per_year * 1000
@@ -109,8 +119,8 @@ conv         <- sec_per_year * 1000
 idx_preind  <- which(years >= 1700 & years <= 1750)
 idx_modern  <- which(years >= 1995 & years <= 2024)
 
-nbp_preind  <- apply(nbp[, , idx_preind], c(1, 2), mean, na.rm = TRUE) * conv
-nbp_modern  <- apply(nbp[, , idx_modern], c(1, 2), mean, na.rm = TRUE) * conv
+nbp_preind  <- apply(nbp_S3[, , idx_preind], c(1, 2), mean, na.rm = TRUE) * conv
+nbp_modern  <- apply(nbp_S3[, , idx_modern], c(1, 2), mean, na.rm = TRUE) * conv
 nbp_diff    <- nbp_modern - nbp_preind
 
 # --- 6. Convert to tidy data frames ---
