@@ -10,38 +10,28 @@ library(scico)
 library(patchwork)
 
 
-#### 1. Compute grid cell areas (m²) ####
-# Each cell is 0.5° x 0.5°; area depends on latitude
-R        <- 6371000           # Earth radius in meters
-deg2rad  <- pi / 180
-cell_lon <- 0.5 * deg2rad     # cell width in radians
-cell_lat <- 0.5 * deg2rad     # cell height in radians
-
-area_vec <- R^2 * cell_lon * cell_lat * cos(lat * deg2rad)  # length = 360 (n lats)
-
-# Expand area to match nbp dimensions [lon, lat, time]
-area_mat <- array( rep(area_vec, each = length(lon)),
-                   dim = c(length(lon), length(lat)))
+#### 1. load data ####
+load("/home/hannil98/GDSTEM-analysis-R/01_Data_Preparation/Data/cell_sizes.RData")
+load("/home/hannil98/GDSTEM-analysis-R/01_Data_Preparation/Data/gdstem_s3_prepared.RData")
+load("/home/hannil98/GDSTEM-analysis-R/01_Data_Preparation/Data/time_space.RData")
 
 
 #### 2. Compute global total NBP per month ####
-#(kg m-2 s-1 -> kg s-1 -> PgC/month) 
-# Seconds per month (365-day calendar: 365/12 days per month)
+# (kg m-2 s-1 → kg/month globally → PgC/month)
+
 sec_per_month <- (365 / 12) * 24 * 3600
 
-# For each time step, sum(nbp * area) gives kg/s globally
-# Multiply by seconds/month -> kg C/month -> convert to PgC (1 Pg = 1e15 g = 1e12 kg)
 n_time <- length(time)
 nbp_global_pgc_month <- numeric(n_time)
 
 for (t in seq_len(n_time)) {
-  nbp_slice <- nbp[, , t]                  # [lon x lat]
-  nbp_global_pgc_month[t] <- sum(nbp_slice * area_mat, na.rm = TRUE) *
+  nbp_slice <- nbp_S3[, , t]                          # [lon x lat]
+  nbp_global_pgc_month[t] <- sum(nbp_slice * area_km2, na.rm = TRUE) *
     sec_per_month / 1e12
 }
 
 #### Aggregate to annual totals ####
-df <- tibble( year = years,
+df <- tibble(year = years,
               nbp_pgc_month = nbp_global_pgc_month ) %>%
   group_by(year) %>%
   summarise(nbp_pgc_yr = sum(nbp_pgc_month), .groups = "drop")
@@ -66,7 +56,7 @@ ggplot(df, aes(x = year, y = nbp_pgc_yr)) +
 options(expressions = 5e5)
 
 # 1. Compute mean NBP across all time steps
-nbp_mean <- apply(nbp, c(1, 2), mean, na.rm = TRUE)
+nbp_mean <- apply(nbp_S3, c(1, 2), mean, na.rm = TRUE)
 
 # 2. Convert units: from kg m-2 s-1 to gC m-2 yr-1
 sec_per_year  <- 365 * 24 * 3600
@@ -76,7 +66,7 @@ nbp_mean_gcc  <- nbp_mean * sec_per_year * 1000
 # nbp_mean_gcc is [lon x lat], expand.grid matches that order
 df_map <- expand.grid(lon = lon, lat = lat) %>%
   mutate(nbp = as.vector(nbp_mean_gcc)) %>%
-  filter(!is.na(nbp))
+  filter(!is.na(nbp_S3))
 
 # 4. Optional: Get country borders, but may cause memory issues
 # world <- ne_countries(scale = "medium", returnclass = "sf")
