@@ -4,7 +4,11 @@ library(ncdf4)
 library(tidyverse)
 
 # open GDSTEM data as NetCDF file
-nc_data <- nc_open("/home/emonier/gdstem/gdstem-postprocessing/output/TRENDY/final-files/S3/GDSTEM_S3_nbp.nc") # S3 NBP
+files_directory <- "/group/moniergrp/emonier/gdstem/gdstem-postprocessing/output/TRENDY/final-files"
+list.files(files_directory) # look at the files
+
+nc_data <- nc_open(file.path(files_directory, "S3", "GDSTEM_S3_nbp.nc")) # load S3 NBP, which is within S3 file
+
 
 # inspect file structure
 print(nc_data)
