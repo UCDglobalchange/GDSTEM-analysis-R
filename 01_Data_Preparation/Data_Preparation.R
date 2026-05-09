@@ -4,7 +4,6 @@ library(ncdf4)
 library(tidyverse)
 
 
-
 # look at data
 list.files("/group/moniergrp/emonier/gdstem/gdstem-postprocessing/output/TRENDY/final-files", 
            recursive = TRUE)
